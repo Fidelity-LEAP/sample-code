@@ -1,0 +1,63 @@
+var template = `
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/1.9.1/showdown.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.0.0/styles/default.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.0.0/highlight.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.0.0/styles/googlecode.min.css">
+    <script type="text/javascript">
+        function getContent(orig){
+            var converter = new showdown.Converter(), text = orig, html = converter.makeHtml(text);
+            return html;
+        }
+    </script>
+    <h2>{{response.title}}</h2>
+    <ul>
+    <div id="notes"></div>
+    {{#if response.next}}<h3>Next</h3>
+    <div id="next"></div>
+    {{/if}}
+    {{#if response.error}}
+    <h2 style="color:red">Error</h2>
+    <p><strong>{{response.error}}</strong></p>
+    {{/if}}
+    <script type="text/javascript">
+        if("{{json_info}}".length>0)
+            document.write("<pre>{{json_info}}</pre>");
+    </script>
+    <script type="text/javascript">
+        if("{{response.rip}}".length>0)
+            document.write(getContent("{{response.rip}}"));
+    </script>
+    <script type="text/javascript">
+        if("{{response.pic}}".length>0)
+            document.write("<img src='{{response.pic}}' alt='postman steps' style='max-width:600px'/>");
+    </script>
+    
+    <!--content to process before rendering-->
+    <script type="text/javascript">
+        pm.getData(function(error, data) {
+            let json_strings = []; let i; let info_array = data.response.info;
+            var notes="<div id='notes'>";
+            for(i=0; i<info_array.length; i++){
+                notes+=getContent(info_array[i].note);
+                if(info_array[i].json_content){
+                    notes+="<pre style='padding-left:20px'><code class='json'>"+JSON.stringify(info_array[i].json_content, null, 2)+"</code></pre>";
+                }
+                if(info_array[i].pic)
+                    notes+="<img src='"+info_array[i].pic+"' alt='postman steps'/>";
+            }
+            notes+="</div>"
+            document.getElementById("notes").innerHTML=notes;
+            document.getElementById("next").innerHTML=getContent(data.response.next);
+            hljs.initHighlighting();
+        });
+    </script>
+`;
+if(pm.response.headers.get("Content-Type").includes("json")){
+    pm.visualizer.set(template, {
+        response: pm.response.json(),
+        json_info: JSON.stringify(pm.response.json().json_content)
+    });
+}
+else if(pm.response.headers.get("Content-Type").includes("html")){
+    pm.visualizer.set(`{{info}}`, {info:"Hmm this seems to be HTML and not JSON - to start learning enter `learn-by-api.glitch.me/intro` in the address bar, choose GET method, and click Send!"});
+}
